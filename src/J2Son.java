@@ -20,11 +20,11 @@ public class J2Son {
 
 
     public static <T extends Object> String convert(final T object) {
-        String result = LEFT_CURLY_BRACE + LINE_BREAK;
-        result += convertItem(object);
-        result = replaceLast(result, COMMA, LINE_BREAK);
-        result += RIGHT_CURLY_BRACE;
-        return result;
+        final StringBuilder result = new StringBuilder(LEFT_CURLY_BRACE + LINE_BREAK);
+        result.append(convertItem(object));
+        result.replace(0,result.length(),replaceLast(result.toString(), COMMA, LINE_BREAK));
+        result.append(RIGHT_CURLY_BRACE);
+        return result.toString();
     }
 
     private static <T extends Object> String convertItem(final T object) {
