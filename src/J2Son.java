@@ -22,7 +22,7 @@ public class J2Son {
     public static <T extends Object> String convert(final T object) {
         final StringBuilder result = new StringBuilder(LEFT_CURLY_BRACE + LINE_BREAK);
         result.append(convertItem(object));
-        result.replace(0,result.length(),replaceLast(result.toString(), COMMA, LINE_BREAK));
+        result.replace(0, result.length(), replaceLast(result.toString(), COMMA, LINE_BREAK));
         result.append(RIGHT_CURLY_BRACE);
         return result.toString();
     }
@@ -115,15 +115,15 @@ public class J2Son {
         return isEmpty(string) ? STRING_EMPTY : string;
     }
 
-    private static boolean isEmpty(Collection collection) {
+    private static boolean isEmpty(final Collection collection) {
         return collection == null || collection.size() == 0;
     }
 
-    private static boolean isEmpty(String string) {
+    private static boolean isEmpty(final String string) {
         return string == null || string.length() == 0 || string.equals(" ");
     }
 
-    public static String replaceLast(String text, String regex, String replacement) {
+    public static String replaceLast(final String text, final String regex, final String replacement) {
         return text.replaceFirst("(?s)" + regex + "(?!.*?" + regex + ")", replacement);
     }
 
