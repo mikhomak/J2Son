@@ -14,80 +14,79 @@ public class J2Son {
     private final static String LEFT_CURLY_BRACE = "{";
     private final static String RiGHT_CURLY_BRACE = "}";
     private final static String LINE_BREAK = "\n";
+    private final static String STRING_EMPTY = "";
     private final static List<Class> CLASSES_WITHOUT_QUOTATION = Arrays.asList(int.class, double.class, float.class, Integer.class, long.class, boolean.class);
     private final static List<Class> COLLECTION_CLASSES = Arrays.asList(Collection.class, List.class, Set.class);
 
 
-    public static <T extends Object> String convert(final T itemModel) {
+    public static <T extends Object> String convert(final T object) {
         String result = LEFT_CURLY_BRACE + LINE_BREAK;
-        result += convertItem(itemModel);
-        if(result.substring(result.length() - 1).equals(COMMA)) {
+        result += convertItem(object);
+        if (result.substring(result.length() - 1).equals(COMMA)) {
             result = result.substring(0, result.length() - 1);
         }
         result += RiGHT_CURLY_BRACE + LINE_BREAK;
         return result;
     }
 
-    private static <T extends Object> String convertItem(final T itemModel) {
-        if(itemModel == null){
-            return Strings.EMPTY;
+    private static <T extends Object> String convertItem(final T object) {
+        if (object == null) {
+            return STRING_EMPTY;
         }
         final StringBuffer result = new StringBuffer();
-        List<Method> methods = Arrays.asList(itemModel.getClass().getDeclaredMethods());
-        methods.stream().filter(method -> method.getName().startsWith("get")).forEach(method -> result.append(addField(method, itemModel)));
+        List<Method> methods = Arrays.asList(object.getClass().getDeclaredMethods());
+        methods.stream().filter(method -> method.getName().startsWith("get")).forEach(method -> result.append(addField(method, object)));
         return result.toString();
     }
 
 
-    private static <T extends Object> String addField(final Method method, final T itemModel) {
+    private static <T extends Object> String addField(final Method method, final T object) {
         final StringBuilder field = new StringBuilder(QUOTATION_MARK);
         field.append(removeGetFromMethodName(method.getName()));
         field.append(QUOTATION_MARK + COLON);
-        field.append(addAttributeValue(method, itemModel));
+        field.append(addAttributeValue(method, object));
         field.append(COMMA);
         return field.toString();
     }
 
-    private static <T extends Object> String addAttributeValue(final Method method, final T itemModel) {
+    private static <T extends Object> String addAttributeValue(final Method method, final T object) {
         final StringBuilder result = new StringBuilder();
         if (method.getReturnType() == String.class) {
-            result.append(addStringValue(method, itemModel));
+            result.append(addStringValue(method, object));
         } else if (COLLECTION_CLASSES.contains(method.getReturnType())) {
-            result.append(addCollectionValue(method, itemModel));
+            result.append(addCollectionValue(method, object));
         } else if (method.getReturnType().getSuperclass() == Object.class) {
-            result.append(addItemValue(method, itemModel));
+            result.append(addItemValue(method, object));
         } else if (CLASSES_WITHOUT_QUOTATION.contains(method.getReturnType())) {
-            result.append(addPrimitiveValue(method, itemModel));
+            result.append(addPrimitiveValue(method, object));
         }
-
-
         return result.toString();
     }
 
-    private static <T extends Object> String addPrimitiveValue(final Method method, final T itemModel) {
+    private static <T extends Object> String addPrimitiveValue(final Method method, final T object) {
         try {
-            return method.invoke(itemModel).toString();
+            return method.invoke(object).toString();
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
-        return Strings.EMPTY;
+        return STRING_EMPTY;
     }
 
-    private static <T extends Object> String addItemValue(final Method method, final T itemModel) {
+    private static <T extends Object> String addItemValue(final Method method, final T object) {
         try {
-            return convert((T) method.invoke(itemModel));
+            return convert((T) method.invoke(object));
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
-        return Strings.EMPTY;
+        return STRING_EMPTY;
     }
 
-    private static <T extends Object> String addCollectionValue(final Method method, final T itemModel) {
+    private static <T extends Object> String addCollectionValue(final Method method, final T object) {
         try {
             final StringBuilder result = new StringBuilder(LEFT_BRACKET);
             String resultString = result.toString();
-            final Collection<T> returnedList = (Collection) method.invoke(itemModel);
-            if (CollectionUtils.isNotEmpty(returnedList)) {
+            final Collection<T> returnedList = (Collection) method.invoke(object);
+            if (isEmpty(returnedList) == false) {
                 returnedList.forEach(item -> result.append(convert(item)).append(COMMA));
                 resultString = result.substring(0, result.length() - 1);
             }
@@ -96,18 +95,17 @@ public class J2Son {
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
-        return Strings.EMPTY;
+        return STRING_EMPTY;
     }
 
-    private static <T extends Object> String addStringValue(final Method method, final T itemModel) {
+    private static <T extends Object> String addStringValue(final Method method, final T object) {
         try {
-            return QUOTATION_MARK + replaceNullByEmptyString((String) method.invoke(itemModel)) + QUOTATION_MARK;
+            return QUOTATION_MARK + replaceNullByEmptyString((String) method.invoke(object)) + QUOTATION_MARK;
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
-        return Strings.EMPTY;
+        return STRING_EMPTY;
     }
-
 
     private static String removeGetFromMethodName(final String methodName) {
         final String result = methodName.substring(3);
@@ -115,9 +113,15 @@ public class J2Son {
     }
 
     private static String replaceNullByEmptyString(final String string) {
-        return StringUtItemModelils.isEmpty(string) ? Strings.EMPTY: string;
+        return isEmpty(string) ? STRING_EMPTY : string;
     }
 
+    private static boolean isEmpty(Collection collection) {
+        return collection == null || collection.size() == 0;
+    }
 
+    private static boolean isEmpty(String string) {
+        return string == null || string.length() == 0 || string.equals(" ");
+    }
 
 }
