@@ -22,10 +22,8 @@ public class J2Son {
     public static <T extends Object> String convert(final T object) {
         String result = LEFT_CURLY_BRACE + LINE_BREAK;
         result += convertItem(object);
-        if (result.substring(result.length() - 1).equals(COMMA)) {
-            result = result.substring(0, result.length() - 1);
-        }
-        result += RIGHT_CURLY_BRACE + LINE_BREAK;
+        result = replaceLast(result, COMMA, LINE_BREAK);
+        result += RIGHT_CURLY_BRACE;
         return result;
     }
 
@@ -46,6 +44,7 @@ public class J2Son {
         field.append(QUOTATION_MARK + COLON);
         field.append(addAttributeValue(method, object));
         field.append(COMMA);
+        field.append(LINE_BREAK);
         return field.toString();
     }
 
@@ -122,6 +121,10 @@ public class J2Son {
 
     private static boolean isEmpty(String string) {
         return string == null || string.length() == 0 || string.equals(" ");
+    }
+
+    public static String replaceLast(String text, String regex, String replacement) {
+        return text.replaceFirst("(?s)" + regex + "(?!.*?" + regex + ")", replacement);
     }
 
 }
