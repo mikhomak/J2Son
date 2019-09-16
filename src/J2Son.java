@@ -12,7 +12,7 @@ public class J2Son {
     private final static String LEFT_BRACKET = "[";
     private final static String RIGHT_BRACKET = "]";
     private final static String LEFT_CURLY_BRACE = "{";
-    private final static String RiGHT_CURLY_BRACE = "}";
+    private final static String RIGHT_CURLY_BRACE = "}";
     private final static String LINE_BREAK = "\n";
     private final static String STRING_EMPTY = "";
     private final static List<Class> CLASSES_WITHOUT_QUOTATION = Arrays.asList(int.class, double.class, float.class, Integer.class, long.class, boolean.class);
@@ -25,7 +25,7 @@ public class J2Son {
         if (result.substring(result.length() - 1).equals(COMMA)) {
             result = result.substring(0, result.length() - 1);
         }
-        result += RiGHT_CURLY_BRACE + LINE_BREAK;
+        result += RIGHT_CURLY_BRACE + LINE_BREAK;
         return result;
     }
 
