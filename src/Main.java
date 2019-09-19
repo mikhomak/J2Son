@@ -11,7 +11,7 @@ public class Main {
         testObject.setName("Cock");
         testObject.setTestObjectDependency(testObjectDependency);
 
-        System.out.println(J2Son.convert(testObject);
+        System.out.println(J2Son.convert(testObject));
     }
 
 }
