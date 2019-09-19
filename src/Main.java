@@ -1,3 +1,5 @@
+import java.util.HashMap;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -9,7 +11,7 @@ public class Main {
         testObject.setName("Cock");
         testObject.setTestObjectDependency(testObjectDependency);
 
-        System.out.println(J2Son.convert(testObject));
+        System.out.println(J2Son.convert(testObject, new HashMap<>()));
     }
 
 }
