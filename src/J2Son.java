@@ -1,9 +1,6 @@
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class J2Son {
     private final static String QUOTATION_MARK = "\"";
@@ -14,96 +11,94 @@ public class J2Son {
     private final static String LEFT_CURLY_BRACE = "{";
     private final static String RIGHT_CURLY_BRACE = "}";
     private final static String LINE_BREAK = "\n";
-    private final static String STRING_EMPTY = "";
     private final static List<Class> CLASSES_WITHOUT_QUOTATION = Arrays.asList(int.class, double.class, float.class, Integer.class, long.class, boolean.class);
     private final static List<Class> COLLECTION_CLASSES = Arrays.asList(Collection.class, List.class, Set.class);
 
 
-    public static <T extends Object> String convert(final T object) {
+    public static <T extends Object> String convert(final T itemModel, final Map<String, List<String>> filter) {
         final StringBuilder result = new StringBuilder(LEFT_CURLY_BRACE + LINE_BREAK);
-        result.append(convertItem(object));
-        result.replace(0, result.length(), replaceLast(result.toString(), COMMA, LINE_BREAK));
-        result.append(RIGHT_CURLY_BRACE);
-        return result.toString();
+        result.append(convertItem(itemModel, filter));
+        result.append(RIGHT_CURLY_BRACE + LINE_BREAK);
+        return removeLastComma(result);
     }
 
-    private static <T extends Object> String convertItem(final T object) {
-        if (object == null) {
-            return STRING_EMPTY;
+    private static <T extends Object> String convertItem(final T itemModel, final Map<String, List<String>> filter) {
+        if (itemModel == null) {
+            return Strings.EMPTY;
         }
         final StringBuffer result = new StringBuffer();
-        List<Method> methods = Arrays.asList(object.getClass().getDeclaredMethods());
-        methods.stream().filter(method -> method.getName().startsWith("get")).forEach(method -> result.append(addField(method, object)));
+        List<Method> methods = Arrays.asList(itemModel.getClass().getDeclaredMethods());
+        methods.stream().filter(method -> method.getName().startsWith("get") && isFilterApplied(method, itemModel, filter)).forEach(method -> result.append(addField(method, itemModel, filter)));
         return result.toString();
     }
 
-
-    private static <T extends Object> String addField(final Method method, final T object) {
-        final StringBuilder field = new StringBuilder(QUOTATION_MARK);
-        field.append(removeGetFromMethodName(method.getName()));
-        field.append(QUOTATION_MARK + COLON);
-        field.append(addAttributeValue(method, object));
-        field.append(COMMA);
-        field.append(LINE_BREAK);
-        return field.toString();
+    private static <T extends Object> String addField(final Method method, final T itemModel, final Map<String, List<String>> filter) {
+        final String field = QUOTATION_MARK + removeGetFromMethodName(method.getName()) +
+                QUOTATION_MARK + COLON +
+                addAttributeValue(method, itemModel, filter) +
+                COMMA + LINE_BREAK;
+        return field;
     }
 
-    private static <T extends Object> String addAttributeValue(final Method method, final T object) {
+    private static <T extends Object> String addAttributeValue(final Method method, final T itemModel, final Map<String, List<String>> filter) {
         final StringBuilder result = new StringBuilder();
         if (method.getReturnType() == String.class) {
-            result.append(addStringValue(method, object));
+            result.append(addStringValue(method, itemModel));
         } else if (COLLECTION_CLASSES.contains(method.getReturnType())) {
-            result.append(addCollectionValue(method, object));
+            result.append(addCollectionValue(method, itemModel, filter));
         } else if (method.getReturnType().getSuperclass() == Object.class) {
-            result.append(addItemValue(method, object));
+            result.append(addItemValue(method, itemModel, filter));
         } else if (CLASSES_WITHOUT_QUOTATION.contains(method.getReturnType())) {
-            result.append(addPrimitiveValue(method, object));
+            result.append(addPrimitiveValue(method, itemModel));
         }
         return result.toString();
     }
 
-    private static <T extends Object> String addPrimitiveValue(final Method method, final T object) {
+    private static <T extends Object> String addPrimitiveValue(final Method method, final T itemModel) {
         try {
-            return method.invoke(object).toString();
+            return method.invoke(itemModel).toString();
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            LOG.error("No such method on converting to JSON: " + method.getName() + " in " + itemModel.getClass().getName());
         }
-        return STRING_EMPTY;
+        return Strings.EMPTY;
     }
 
-    private static <T extends Object> String addItemValue(final Method method, final T object) {
+    private static <T extends Object> String addItemValue(final Method method, final T itemModel, final Map<String, List<String>> filter) {
         try {
-            return convert((T) method.invoke(object));
+            return convert((T) method.invoke(itemModel), filter);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            LOG.error("No such method on converting to JSON: " + method.getName() + " in " + itemModel.getClass().getName());
         }
-        return STRING_EMPTY;
+        return Strings.EMPTY;
     }
 
-    private static <T extends Object> String addCollectionValue(final Method method, final T object) {
+    private static <T extends Object> String addCollectionValue(final Method method, final T itemModel, final Map<String, List<String>> filter) {
         try {
             final StringBuilder result = new StringBuilder(LEFT_BRACKET);
-            String resultString = result.toString();
-            final Collection<T> returnedList = (Collection) method.invoke(object);
-            if (isEmpty(returnedList) == false) {
-                returnedList.forEach(item -> result.append(convert(item)).append(COMMA));
-                resultString = result.substring(0, result.length() - 1);
+            final Collection<T> returnedList = (Collection) method.invoke(itemModel);
+            if (CollectionUtils.isNotEmpty(returnedList)) {
+                returnedList.forEach(item -> result.append(convert(item, filter)).append(COMMA));
             }
-            resultString += RIGHT_BRACKET;
-            return resultString;
+            result.append(LINE_BREAK + RIGHT_BRACKET);
+            return removeLastComma(result);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            LOG.error("No such method on converting to JSON: " + method.getName() + " in " + itemModel.getClass().getName());
         }
-        return STRING_EMPTY;
+        return Strings.EMPTY;
     }
 
-    private static <T extends Object> String addStringValue(final Method method, final T object) {
+    private static <T extends Object> String addStringValue(final Method method, final T itemModel) {
         try {
-            return QUOTATION_MARK + replaceNullByEmptyString((String) method.invoke(object)) + QUOTATION_MARK;
+            return QUOTATION_MARK + replaceNullByEmptyString((String) method.invoke(itemModel)) + QUOTATION_MARK;
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            LOG.error("No such method on converting to JSON: " + method.getName() + " in " + itemModel.getClass().getName());
         }
-        return STRING_EMPTY;
+        return Strings.EMPTY;
+    }
+
+    private static <T extends Object> boolean isFilterApplied(final Method method, final T itemModel, final Map<String, List<String>> filter) {
+        final List<String> filteredFields = filter.get(itemModel.getClass().getName());
+        return CollectionUtils.isEmpty(filteredFields) || filteredFields.contains(removeGetFromMethodName(method.getName()));
     }
 
     private static String removeGetFromMethodName(final String methodName) {
@@ -112,19 +107,15 @@ public class J2Son {
     }
 
     private static String replaceNullByEmptyString(final String string) {
-        return isEmpty(string) ? STRING_EMPTY : string;
+        return StringUtils.isEmpty(string) ? Strings.EMPTY : string;
     }
 
-    private static boolean isEmpty(final Collection collection) {
-        return collection == null || collection.size() == 0;
-    }
-
-    private static boolean isEmpty(final String string) {
-        return string == null || string.length() == 0 || string.equals(" ");
-    }
-
-    public static String replaceLast(final String text, final String regex, final String replacement) {
+    private static String replaceLast(final String text, final String regex, final String replacement) {
         return text.replaceFirst("(?s)" + regex + "(?!.*?" + regex + ")", replacement);
+    }
+
+    private static String removeLastComma(final StringBuilder stringBuilder) {
+        return replaceLast(stringBuilder.toString(), COMMA, LINE_BREAK);
     }
 
 }
